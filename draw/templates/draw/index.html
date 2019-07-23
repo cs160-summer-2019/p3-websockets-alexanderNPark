@@ -19,18 +19,78 @@
     <canvas id="myCanvas" width="750px" height="750px"></canvas>
 </body>
 <script>
+    window.onLoad = function(){
+          // setting up the canvas and one paper tool
+      
+      var canvas = document.getElementById('myCanvas');
+      // getting the URL (you may want to use for Exercise 3)
+      var url = window.location.href;
+      var user = Math.floor(Math.random() * 100);
+      var socket = new WebSocket(
+          'wss://Websock-alexanderpark.codeanyapp.com/ws/draw');
+      
+      paper.setup(canvas);
+      var tool = new paper.Tool();
+      var path;
+      var colors = ['red', 'blue', 'green', 'black', 'pink']
+      var color = colors[Math.floor(Math.random() * 5)];
+      
+      tool.onMouseDown = function(ev){
+          path = new paper.Path();
+          path.add(event.point);
+          path.strokeColor = color;
+          path.strokeWidth = 2;
+      }
+      
+     tool.onMouseDrag = function(ev) {
+         path.add(ev.point);
+      }
+     
+     tool.onMouseUp = function(ev){
+          path.add(event.point);
+          var listOfPoints = [];
+          
+          for (var i = 0; i < path.segments.length; i++) {
+            listOfPoints.push(path.segments[i].point.x);
+            listOfPoints.push(path.segments[i].point.y);
+          }
+       
+          var packet = {
+            user_id : user,
+            path_data: listOfPoints.join(),
+            pen_color: color
+          }
+          socket.send(JSON.stringify(packet));
+     }
+     
+     
+      
+      
+      
+      
+      
+      
+      socket.onmessage = function(receivedMessage) {
+           
+      };
 
-    // setting up the canvas and one paper tool
-    var canvas = document.getElementById('myCanvas');
-    paper.setup(canvas);
-    var tool = new paper.Tool();
+      // use when sending a message to the server
+      // to be broadcasted to all clients, please add a delay
+      //socket.send(message);
 
-    // getting the URL (you may want to use for Exercise 3)
-    var url = window.location.href;
-
-    // var socket = new WebSocket(
-    //     'wss://<your url here>/ws/draw');
-
+      // notify console if socket closes unexpectedly
+      socket.onclose = function(e) {
+          console.error('Chat socket closed unexpectedly');
+      };
+      
+    }
+  
+  
+  
+  
+  
+    
+  
 
 </script>
 </html>
