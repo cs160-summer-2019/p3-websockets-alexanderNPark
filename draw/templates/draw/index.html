@@ -66,14 +66,14 @@
       }
       
       window.addEventListener('devicemotion', function(ev)   {
-        if (Math.abs(ev.acceleration.x) > 15 || Math.abs(ev.acceleration.y) > 15){
+        if (Math.abs(ev.acceleration.x) > 20 || Math.abs(ev.acceleration.y) > 20){
             paper.project.clear();
         }
       });
       
       window.addEventListener('deviceorientation', function(ev) {
-        if (Math.abs(ev.gamma - gamma) > 3 ) {
-          gamma = ev.gamma;
+        if ((ev.gamma - gamma) > 45) {
+          
           color = colors[Math.floor(Math.random() * colors.length)];
         }
       });
