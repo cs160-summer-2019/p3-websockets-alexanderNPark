@@ -7,6 +7,7 @@
     <title>P4 Drawing</title>
 
     <link rel="stylesheet" type="text/css" href="{% static 'draw/vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/firstpage.css' %}" />
     <script type="text/javascript" src="{% static 'draw/vendor/jquery/jquery-3.3.1.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'draw/vendor/paper/paper-full.min.js' %}"></script>
 
@@ -15,100 +16,338 @@
 
 </head>
 <body>
-
-   <canvas id="myCanvas" width="750px" height="750px"></canvas>
+   <div id="centralContainer" class="container rounded">
+     <div id="gamesText" class="row">
+       Games:
+     </div>
+     <div id="rowContainer" class="row">
+       
+     </div>
+     <canvas id="myCanvas" width="1500px" height="1000px"></canvas>
+  </div>
+   <img id="mineP" class="visuallyhidden" src="/static/imgs/mineP.png" width="100" height="100">
 </body>
 <script type="text/javascript">
     
     // setting up the canvas and one paper tool
-    window.onload = function() {
-     
+    var died = false;
+    var otherDied = false;
+    var url = window.location.href;
+    var usID = Math.floor(Math.random() * 10000000000);
+    var largeDisplay = false;
+    var central = [];
+    var status = "foe";
+    var turns = 0;
+    var canvas = document.getElementById('myCanvas');
       
-      var colors = ['red', 'blue', 'green', 'black','pink', 'lime', 'olive', 'orange', 'yellow','cyan', 'indigo', 'purple']
+      $("#mineP").hide();
       
-      var color = colors[Math.floor(Math.random() * colors.length)];
-      var canvas = document.getElementById('myCanvas');
       paper.setup(canvas);
-      var tool = new paper.Tool();
-      var gamma = 0;
+  
+    
+    window.onload = function() {
       
-      var path;
+      var hardCoded = [[1, 2, 2], [1, 'x', 'x'], [1, 2, 2]];//hard coded handles 
       
-      tool.minDistance = 5;
+      var bigOne = []
+      var bigTwo = []
       
-      tool.onMouseDown = function(event) {
+      central.push(bigOne);
+      central.push(bigTwo);
+      
+      if(url.indexOf("?size=large") > -1){
+        largeDisplay = true;
+      }
+      
+      var chosen = false;
+      if(largeDisplay){
+        $("#rowContainer").hide();
+        $("#gamesText").hide();
+        
+        chosen=true;
+        load_game_big();
+        
+      } else{
+        
+          $("#myCanvas").hide();
+
+          var $minesweeper = $('<div id="mineButton" class="col rounded"><img src="/static/imgs/mine.jpg"></div>');
+          var $otherGame1 = $('<div id="otherButton" class="col rounded "></div>');
+          var $otherGame2 = $('<div id="other2Button" class="col rounded"></div>');
+          $("#rowContainer").append($minesweeper);
+          $("#rowContainer").append($otherGame1);
+          $("#rowContainer").append($otherGame2);
+
+          $minesweeper.on('click', () => {
+            $("#rowContainer").hide();
+            $("#gamesText").hide();
+            chosen=true;
+            $("#myCanvas").show();
+            load_game_small();
+          });
+      
+      }
+         
+         
+         
+         
+      
+         
+  
+      function load_game_small(){
+        var squareWidth = 100;
+        var squareHeight =100;
+        var margin = 10;
+        var radius = new paper.Size(20, 20);
+        for(var i =0;i<3;i++){
+          for(var j =0;j<3;j++){
+            var rectangle = new paper.Rectangle(new paper.Point(margin+j*squareWidth, margin+i*squareHeight), new paper.Point(margin+(j+1)*squareWidth, margin+(i+1)*squareHeight));
+            var path = new paper.Path.Rectangle(rectangle,radius);
+            path.revealed_status = false;
+            path.item_status = hardCoded[i][j];
+            path.coordinates = (3*i+j);
+            path.onMouseUp = function(event) {
+              if(died){
+                return;
+              }
+               turns+=1
+              // This link maybe helpful http://paperjs.org/reference/pointtext/#pointtext-point
+              // insert above might work http://paperjs.org/tutorials/project-items/project-hierarchy/
+              if(this.item_status=='x'){
+                socket.send("died");
+                var text = new paper.PointText({
+                  point: [50, 50],
+
+                  fillColor: 'red',
+                  fontFamily: 'Courier New',
+                  fontWeight: 'bold',
+                  fontSize: 50
+                });
+                text.content = "You lost!"
+                paper.project.insertLayer(1,text);
+                died=true;
+              } 
+              
+             
+              var packet = {userID:usID, elem:""+this.coordinates, status:""}
+              if(turns==7 && died!=true){
+                packet.status = "won"
+                died = true;
+                socket.send(JSON.stringify(packet));
+                transform(this)
+                console.log(turns==7)
+                return
+              }
+             
+              
+              socket.send(JSON.stringify(packet));
+              
+              transform(this)
+            }
+            path.fillColor = 'green';
+            path.strokeColor = 'black'
+          }
           
-          path = new paper.Path();
-          path.add(event.point);
-          path.strokeColor = color;
-          path.strokeWidth = 5;
+        }
+        
+        paper.view.draw()
         
       }
       
-      tool.onMouseDrag = function(event) {
-          path.add(event.point);
-      }
       
-      tool.onMouseUp = function(event) {
-          path.add(event.point);
-          var path_toSend = [];
-        //some one gave me the idea of putting x and y next to each other into a string
-          for (var i = 0; i < path.segments.length; i++) {
-            path_toSend.push(path.segments[i].point.x);
-            path_toSend.push(path.segments[i].point.y);
+      
+       
+       
+       function load_game_big(){
+        var squareWidth = 100;
+        var squareHeight =100;
+        var margin = 10;
+        var radius = new paper.Size(20, 20);
+        for(var i =0;i<3;i++){
+          for(var j =0;j<3;j++){
+            var rectangle = new paper.Rectangle(new paper.Point(margin+j*squareWidth, margin+i*squareHeight), new paper.Point(margin+(j+1)*squareWidth, margin+(i+1)*squareHeight));
+            var path = new paper.Path.Rectangle(rectangle,radius);
+            path.revealed_status = false;
+            path.item_status = hardCoded[i][j];
+            path.fillColor = 'green';
+            path.strokeColor = 'black'
+            bigOne.push(path);
           }
-        
-          var packet = {
-            genPath: path_toSend.join(),
-            color: color
-          }
-          socket.send(JSON.stringify(packet));
-      }
-      
-      window.addEventListener('devicemotion', function(ev)   {
-        if (Math.abs(ev.acceleration.x) > 20 || Math.abs(ev.acceleration.y) > 20){
-            paper.project.clear();
-        }
-      });
-      
-      window.addEventListener('deviceorientation', function(ev) {
-        if ((ev.gamma - gamma) > 45) {
           
-          color = colors[Math.floor(Math.random() * colors.length)];
         }
-      });
+
+       for(var i =0;i<3;i++){
+          for(var j =0;j<3;j++){
+            var rectangle = null;
+            if(status=="friend"){
+              rectangle = new paper.Rectangle(new paper.Point(margin+j*squareWidth, 300+margin+i*squareHeight), new paper.Point(margin+(j+1)*squareWidth, 300+margin+(i+1)*squareHeight));
+            } 
+            else if(status =="foe"){
+              rectangle = new paper.Rectangle(new paper.Point(400+margin+j*squareWidth, margin+i*squareHeight), new paper.Point(400+margin+(j+1)*squareWidth, margin+(i+1)*squareHeight));
+            }
+           
+            var path = new paper.Path.Rectangle(rectangle,radius);
+            path.revealed_status = false;
+            path.item_status = hardCoded[i][j];
+            path.fillColor = 'green';
+            path.strokeColor = 'black'
+            bigTwo.push(path);
+          }
+          
+        }
+        
+        paper.view.draw()
+        
+      }
+      
+      
+      
+      
+      
+     
+     
+   }
+      
+    function winOrLose(){
       
     }
-   
+    
+    function transform(item){
+      item.remove();
+      
+      if(item.item_status=='x'){
+        var raster = new paper.Raster('mineP');
+        raster.position = item.position
+      }
+      else{
+         var text = new paper.PointText({
+                fillColor: 'green',
+                fontFamily: 'Courier New',
+                fontWeight: 'bold',
+                fontSize: 50
+            });
+            text.position = item.position;
+            text.content =""+item.item_status;
+            
+      }
+     
+      paper.view.draw()
+      
+    }
+      
+    
    
     
     // getting the URL (you may want to use for Exercise 3)
-    var url = window.location.href;
     var socket = new WebSocket('wss://Websock-alexanderpark.codeanyapp.com/ws/draw');
-  
+    
+    var lastIndex = 0;
+    
+    var userTable = {};
+    var specialCheer = new paper.PointText({
+                  point: [50, 400],
+
+                  fillColor: 'red',
+                  fontFamily: 'Courier New',
+                  fontWeight: 'bold',
+                  fontSize: 50
+                });;
+    paper.project.insertLayer(1,specialCheer);
+    var cheers = ["Yeah your friend got one!", "Woo! Your pal's making progress!"]
+    var taunts = ["Your opponent got one.\nWhat do you have?", "He's making progress!\nWhat are you making?"]
+    
+    var wonFriendMode = false;
     socket.onmessage = function(receivedMessage) {
+     
       
-      if (url.indexOf("?size=large") > -1) {
-        var userPacket = JSON.parse(receivedMessage.data);
-        
-        var newPath = new paper.Path();
-        newPath.strokeColor = userPacket.color;
-        newPath.strokeWidth = 5;
-        
-        var pathList = userPacket.genPath.split(",");
-        //some one gave me the idea of putting x and y next to each other into a string
-        var x;
-        var y;
-        var point;
-        
-        for (var i = 0; i < pathList.length-1; i+=2) {
-          x = parseInt(pathList[i], 10);
-          y = parseInt(pathList[i+1], 10);
-          point = new paper.Point(x,y);
-          newPath.add(point);
+      
+      if(receivedMessage.data=="died"){
+          
+         
+          if(!largeDisplay && !died){
+            paper.project.clear();
+            died = true;
+            var text = new paper.PointText({
+                point: [50, 50],
+               
+                fillColor: 'red',
+                fontFamily: 'Courier New',
+                fontWeight: 'bold',
+                fontSize: 50
+            });
+            text.content = "Your "+status+" lost!"
+          }
+          return;
+          
+      }
+      
+      var packet = JSON.parse(receivedMessage.data);
+      console.log(packet.status+"N")
+      var x=0;
+      if(largeDisplay){
+        if(userTable[packet.userID]==undefined){
+            userTable[packet.userID] = lastIndex;
+            lastIndex+=1
         }
+        console.log(parseInt(packet.elem,10))
+        transform(central[userTable[packet.userID]] [parseInt(packet.elem,10)]);
         
-      } 
+        
+      } else{
+        
+        if(status=="friend"){
+          
+          if(packet.userID!=""+usID){
+             if(packet.status.localeCompare("won")==0 && turns==7 && !wonFriendMode){
+               died = true;
+                paper.project.clear();
+
+                var text = new paper.PointText({
+                    point: [50, 50],
+
+                    fillColor: 'green',
+                    fontFamily: 'Courier New',
+                    fontWeight: 'bold',
+                    fontSize: 50
+                });
+                text.content = "You both Won!\nCongrats!"
+               var packet = {userID:usID, elem:""+this.coordinates, status:"won"}
+               socket.send(JSON.stringify(packet));
+               wonFriendMode = true;
+               return;
+             }
+             specialCheer.content = cheers[ Math.floor(Math.random() * (cheers.length-1))]
+             paper.view.draw()
+          }
+          
+          
+        }else if(status=="foe"){
+          
+          if(packet.userID!=""+usID && packet.status.localeCompare("won")==0){
+            died = true;
+            paper.project.clear();
+            
+            var text = new paper.PointText({
+                point: [50, 50],
+               
+                fillColor: 'red',
+                fontFamily: 'Courier New',
+                fontWeight: 'bold',
+                fontSize: 50
+            });
+            text.content = "Your "+status+" Won!\nYou Lost! Sucker."
+            
+            return 
+          }
+          if(packet.userID!=""+usID){
+              specialCheer.content = taunts[x]
+              paper.view.draw()
+              x=1-x
+          }
+        }
+      }
+      
+      
     }
     
     socket.onclose = function(e) {
